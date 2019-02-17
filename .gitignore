@@ -1,2 +1,8 @@
 venv/
 .vscode/
+env/
+
+*.pyc
+__pycache__/
+
+anthelp*.json
