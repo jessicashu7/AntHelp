@@ -8,6 +8,7 @@ from twilio.twiml.messaging_response import (
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+import get_data
 
 # Use the application default credentials
 cred = credentials.ApplicationDefault()
@@ -24,49 +25,49 @@ account_sid = 'SK4a387eefcebc18b161c694ceca40448f'
 app.config.from_object(__name__)
 
 # Standard messages
-default_msg = "Sorry, we didn't understand your question (or don't have any answers!) :("
-greeting = """\n\nHello! Welcome to Anthelp!\n\nText us a question, and we'll try to answer!\n\nFor example, try 'I'm hungry', or 'Where can I park?'"""
+default_msg = "Sorry, we didn't understand your request (or don't have any answers!) :("
+greeting = """\n\nHello! Welcome to Anthelp!\n\nSend a text in the following format: [adjective noun], for example "good food", and we'll try to answer!\n\n"""
 
 # text ZOTZOT TO 1-626-427-3513 to begin
-
-@app.route("/sms", methods=['GET', 'POST'])
-def sms_reply():
-    counter = session.get('counter', 0)
-    ### GREETING MESSAGE
-    if counter == 0:
-        # create greeting
-        greetResp = MessagingResponse()
-        # insert greeting message
-        greetResp.message(greeting)
-        # return greeting message
-        counter += 1
-        session['counter'] = counter
-        return str(greetResp)
-
-    # create next message
-    resp = MessagingResponse()
+@app.route('/', methods=['GET', 'POST'])
+def main():
     if request.method == 'POST':
-        # get message body
-        query = request.form['Body']
-        ## process query here
-        parse_message(query, resp)
-
+        resp = MessagingResponse()
+        query = request.form['Body'].lower()
+        create_message(query, resp)
+        #return "post"
     return str(resp)
 
-def parse_message(query, resp):
-    # determine what type of response to send based off of text content
-    if any(x in query for x in ["food", "hungry", "eat"]):
-        food_response(query, resp)
+
+def create_message(query, resp):
+    if query == "zot zot":
+        resp.message(greeting)
     else:
-        default_response(query, resp)
+        words = query.split()
+        if len(words) != 2:
+            default_response(resp)
+        else:
+            adj, noun = words
+            if any(noun in query for noun in ["food", "hungry", "eat"]):
+                create_response("food", adj, resp)
+            elif any(noun in query for noun in ["study", "library", "quiet"]):
+                create_response("Study Spaces", adj,resp)
+            else:
+                default_response(resp)
 
-def food_response(query, resp):
-    # for food related responses
-    resp.message("How about Panda Express?")
+def create_response(cat, adj,resp):
+    items = get_data.search_by_adjective(adj, get_data.get_info(cat, db))
+    if len(items) == 0:
+        default_response(resp)
+        return
+    return_message = "\n\nThanks for asking. Here's what we got!\n"
+    for i in items:
+        return_message += str(i[0]) + " - " + ", ".join(i[1]["Locations"]) +  "\n"
+    resp.message(return_message)
 
-def default_response(query, resp):
-    # if it doesn't match anything :(
+
+def default_response(resp):
     resp.message(default_msg)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
