@@ -42,6 +42,11 @@ def main():
 def create_message(query, resp):
     if query == "zot zot":
         resp.message(greeting)
+    elif any(x in query for x in ["hi", "hello", "what's up"]):
+        msg = resp.message("Hiya! Welcome to UCI!")
+        msg.media("https://www.parking.uci.edu/AT/images/UCI-wazer-4.png")
+    elif any(x in query for x in ["thank you", "thanks", "ty", "thx"]):
+        resp.message("You're welcome! Have a good one!")
     else:
         words = query.split()
         if len(words) != 2:
